@@ -46,6 +46,7 @@ import {
   initiateOrder,
   setInitialValues,
   speculateTransaction,
+  stripeCustomer,
   confirmPayment,
   sendMessage,
 } from './CheckoutPage.duck';
@@ -120,8 +121,12 @@ export class CheckoutPageComponent extends Component {
       listing,
       transaction,
       fetchSpeculatedTransaction,
+      fetchStripeCustomer,
       history,
     } = this.props;
+
+    fetchStripeCustomer();
+
     // Browser's back navigation should not rewrite data in session store.
     // Action is 'POP' on both history.back() and page refresh cases.
     // Action is 'PUSH' when user has directed through a link
@@ -747,6 +752,8 @@ CheckoutPageComponent.propTypes = {
     bookingStart: instanceOf(Date).isRequired,
     bookingEnd: instanceOf(Date).isRequired,
   }),
+  fetchStripeCustomer: func.isRequired,
+  stripeCustomerFetched: bool.isRequired,
   fetchSpeculatedTransaction: func.isRequired,
   speculateTransactionInProgress: bool.isRequired,
   speculateTransactionError: propTypes.error,
@@ -783,6 +790,7 @@ const mapStateToProps = state => {
     listing,
     bookingData,
     bookingDates,
+    stripeCustomerFetched,
     speculateTransactionInProgress,
     speculateTransactionError,
     speculatedTransaction,
@@ -795,6 +803,7 @@ const mapStateToProps = state => {
   return {
     scrollingDisabled: isScrollingDisabled(state),
     currentUser,
+    stripeCustomerFetched,
     bookingData,
     bookingDates,
     speculateTransactionInProgress,
@@ -812,8 +821,9 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => ({
   dispatch,
-  onInitiateOrder: (params, transactionId) => dispatch(initiateOrder(params, transactionId)),
   fetchSpeculatedTransaction: params => dispatch(speculateTransaction(params)),
+  fetchStripeCustomer: () => dispatch(stripeCustomer()),
+  onInitiateOrder: (params, transactionId) => dispatch(initiateOrder(params, transactionId)),
   onRetrievePaymentIntent: params => dispatch(retrievePaymentIntent(params)),
   onHandleCardPayment: params => dispatch(handleCardPayment(params)),
   onConfirmPayment: params => dispatch(confirmPayment(params)),
