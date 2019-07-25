@@ -5,6 +5,7 @@ import { connect } from 'react-redux';
 import { injectIntl, intlShape, FormattedMessage } from 'react-intl';
 import { ensureCurrentUser } from '../../util/data';
 import { propTypes } from '../../util/types';
+import { createStripeCustomer } from '../../ducks/paymentMethods.duck';
 import { isScrollingDisabled } from '../../ducks/UI.duck';
 import {
   IconClose,
@@ -19,11 +20,18 @@ import {
 } from '../../components';
 import { TopbarContainer } from '..';
 import { PaymentMethodsForm } from '../../forms';
+import { createStripeSetupIntent, loadData } from './PaymentMethodsPage.duck.js';
 
 import css from './PaymentMethodsPage.css';
 
 export const PaymentMethodsPageComponent = props => {
-  const { currentUser, scrollingDisabled, intl } = props;
+  const {
+    currentUser,
+    scrollingDisabled,
+    intl,
+    onCreateSetupIntent,
+    onCreateStripeCustomer,
+  } = props;
 
   const tabs = [
     {
@@ -68,10 +76,32 @@ export const PaymentMethodsPageComponent = props => {
       }`
     : null;
 
-  const initalValuesForStripePayment = { name: userName };
+  const initalValuesForStripePayment = { name: userName, country: 'FI' };
 
   const handleSubmit = params => {
-    //TODO
+    const { stripe, card, formValues } = params;
+    onCreateSetupIntent().then(setupIntent => {
+      stripe
+        .handleCardSetup(setupIntent.attributes.clientSecret, card, {
+          payment_method_data: {
+            billing_details: { name: formValues.name },
+          },
+        })
+        .then(result => {
+          if (result.error) {
+            console.log('handleCardSetup failed', result.error);
+          } else {
+            console.log('Success', result);
+            console.log('currentUser', currentUser);
+
+            if (!currentUser.stripeCustormer) {
+              onCreateStripeCustomer(result);
+            }
+
+            // TODO save payment method
+          }
+        });
+    });
   };
 
   const savedPaymentMethod = false; //TODO
@@ -151,7 +181,10 @@ const mapStateToProps = state => {
   };
 };
 
-const mapDispatchToProps = dispatch => ({});
+const mapDispatchToProps = dispatch => ({
+  onCreateSetupIntent: params => dispatch(createStripeSetupIntent(params)),
+  onCreateStripeCustomer: params => dispatch(createStripeCustomer(params)),
+});
 
 const PaymentMethodsPage = compose(
   connect(
@@ -160,5 +193,7 @@ const PaymentMethodsPage = compose(
   ),
   injectIntl
 )(PaymentMethodsPageComponent);
+
+PaymentMethodsPage.loadData = loadData;
 
 export default PaymentMethodsPage;
